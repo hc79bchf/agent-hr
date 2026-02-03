@@ -1,0 +1,1 @@
+export { StakeholdersSection } from './StakeholdersSection';
