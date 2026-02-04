@@ -449,26 +449,55 @@ export function ComponentRegistryPage() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const fileArray = Array.from(files);
+    // List of allowed text file extensions
+    const allowedExtensions = ['.txt', '.json', '.yaml', '.yml', '.md', '.py', '.js', '.ts', '.tsx', '.jsx', '.css', '.html', '.xml', '.csv', '.sh', '.sql', '.env', '.gitignore', '.dockerfile'];
+
+    const fileArray = Array.from(files).filter((file) => {
+      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+      return allowedExtensions.includes(ext) || file.name.toLowerCase() === 'dockerfile';
+    });
+
+    if (fileArray.length === 0) {
+      setCreateError('No supported text files found. Only text-based files are allowed.');
+      return;
+    }
+
     const readPromises = fileArray.map((file) => {
-      return new Promise<UploadedFile>((resolve) => {
+      return new Promise<UploadedFile | null>((resolve) => {
         const reader = new FileReader();
         reader.onload = (event) => {
+          const content = event.target?.result as string;
+          // Check for NUL characters (binary content)
+          if (content && content.includes('\0')) {
+            console.warn(`Skipping binary file: ${file.name}`);
+            resolve(null);
+            return;
+          }
           resolve({
             name: file.name,
             path: (file as unknown as { webkitRelativePath?: string }).webkitRelativePath || file.name,
-            content: event.target?.result as string,
+            content: content || '',
           });
+        };
+        reader.onerror = () => {
+          console.warn(`Failed to read file: ${file.name}`);
+          resolve(null);
         };
         reader.readAsText(file);
       });
     });
 
-    Promise.all(readPromises).then((uploadedFiles) => {
+    Promise.all(readPromises).then((results) => {
+      const uploadedFiles = results.filter((f): f is UploadedFile => f !== null);
+      if (uploadedFiles.length === 0) {
+        setCreateError('No valid text files could be read. Binary files are not supported.');
+        return;
+      }
       setCreateFormData((prev) => ({
         ...prev,
         uploadedFiles: [...prev.uploadedFiles, ...uploadedFiles],
       }));
+      setCreateError(null);
     });
 
     // Reset input so the same file can be selected again

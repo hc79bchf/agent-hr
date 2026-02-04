@@ -13,6 +13,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -24,18 +25,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Create ComponentAccessLevel enum
-    componentaccesslevel = sa.Enum('viewer', 'executor', 'contributor', name='componentaccesslevel')
-    componentaccesslevel.create(op.get_bind(), checkfirst=True)
+    # Create ComponentAccessLevel enum using raw SQL
+    op.execute("CREATE TYPE componentaccesslevel AS ENUM ('viewer', 'executor', 'contributor')")
 
-    # Create RequestStatus enum
-    requeststatus = sa.Enum('pending', 'approved', 'denied', name='requeststatus')
-    requeststatus.create(op.get_bind(), checkfirst=True)
+    # Create RequestStatus enum using raw SQL
+    op.execute("CREATE TYPE requeststatus AS ENUM ('pending', 'approved', 'denied')")
 
     # Add access_level column to component_grants
     op.add_column('component_grants', sa.Column(
         'access_level',
-        sa.Enum('viewer', 'executor', 'contributor', name='componentaccesslevel'),
+        postgresql.ENUM('viewer', 'executor', 'contributor', name='componentaccesslevel', create_type=False),
         nullable=False,
         server_default='viewer'
     ))
@@ -60,10 +59,10 @@ def upgrade() -> None:
         sa.Column('id', sa.UUID(), nullable=False),
         sa.Column('component_id', sa.UUID(), nullable=False),
         sa.Column('agent_id', sa.UUID(), nullable=False),
-        sa.Column('requested_level', sa.Enum('viewer', 'executor', 'contributor', name='componentaccesslevel'), nullable=False),
+        sa.Column('requested_level', postgresql.ENUM('viewer', 'executor', 'contributor', name='componentaccesslevel', create_type=False), nullable=False),
         sa.Column('requested_by', sa.UUID(), nullable=False),
         sa.Column('requested_at', sa.DateTime(), nullable=False),
-        sa.Column('status', sa.Enum('pending', 'approved', 'denied', name='requeststatus'), nullable=False, server_default='pending'),
+        sa.Column('status', postgresql.ENUM('pending', 'approved', 'denied', name='requeststatus', create_type=False), nullable=False, server_default='pending'),
         sa.Column('resolved_by', sa.UUID(), nullable=True),
         sa.Column('resolved_at', sa.DateTime(), nullable=True),
         sa.Column('denial_reason', sa.String(length=1000), nullable=True),
@@ -92,6 +91,6 @@ def downgrade() -> None:
     # Drop access_level column from component_grants
     op.drop_column('component_grants', 'access_level')
 
-    # Drop enums
-    sa.Enum(name='requeststatus').drop(op.get_bind(), checkfirst=True)
-    sa.Enum(name='componentaccesslevel').drop(op.get_bind(), checkfirst=True)
+    # Drop enums using raw SQL
+    op.execute("DROP TYPE IF EXISTS requeststatus")
+    op.execute("DROP TYPE IF EXISTS componentaccesslevel")
