@@ -1,7 +1,7 @@
 """Add organization_id to users table.
 
 Revision ID: add_user_org_id
-Revises: None
+Revises: 5dbecfa52786
 Create Date: 2026-01-30
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects.postgresql import UUID
 
 # revision identifiers, used by Alembic.
 revision = 'add_user_org_id'
-down_revision = None
+down_revision = '5dbecfa52786'
 branch_labels = None
 depends_on = None
 

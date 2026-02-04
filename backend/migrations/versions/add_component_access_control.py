@@ -13,7 +13,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = 'add_component_access_control'
@@ -24,18 +24,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Create ComponentAccessLevel enum
-    componentaccesslevel = sa.Enum('viewer', 'executor', 'contributor', name='componentaccesslevel')
-    componentaccesslevel.create(op.get_bind(), checkfirst=True)
+    # Create ComponentAccessLevel enum using raw SQL to handle IF NOT EXISTS
+    op.execute("DO $$ BEGIN CREATE TYPE componentaccesslevel AS ENUM ('viewer', 'executor', 'contributor'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
 
-    # Create RequestStatus enum
-    requeststatus = sa.Enum('pending', 'approved', 'denied', name='requeststatus')
-    requeststatus.create(op.get_bind(), checkfirst=True)
+    # Create RequestStatus enum using raw SQL to handle IF NOT EXISTS
+    op.execute("DO $$ BEGIN CREATE TYPE requeststatus AS ENUM ('pending', 'approved', 'denied'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
 
     # Add access_level column to component_grants
+    # Use postgresql.ENUM with create_type=False since we already created the enum above
+    componentaccesslevel_type = postgresql.ENUM('viewer', 'executor', 'contributor', name='componentaccesslevel', create_type=False)
     op.add_column('component_grants', sa.Column(
         'access_level',
-        sa.Enum('viewer', 'executor', 'contributor', name='componentaccesslevel'),
+        componentaccesslevel_type,
         nullable=False,
         server_default='viewer'
     ))
@@ -55,15 +55,17 @@ def upgrade() -> None:
     )
 
     # Create component_access_requests table
+    # Use postgresql.ENUM with create_type=False since we already created the enums above
+    requeststatus_type = postgresql.ENUM('pending', 'approved', 'denied', name='requeststatus', create_type=False)
     op.create_table(
         'component_access_requests',
         sa.Column('id', sa.UUID(), nullable=False),
         sa.Column('component_id', sa.UUID(), nullable=False),
         sa.Column('agent_id', sa.UUID(), nullable=False),
-        sa.Column('requested_level', sa.Enum('viewer', 'executor', 'contributor', name='componentaccesslevel'), nullable=False),
+        sa.Column('requested_level', componentaccesslevel_type, nullable=False),
         sa.Column('requested_by', sa.UUID(), nullable=False),
         sa.Column('requested_at', sa.DateTime(), nullable=False),
-        sa.Column('status', sa.Enum('pending', 'approved', 'denied', name='requeststatus'), nullable=False, server_default='pending'),
+        sa.Column('status', requeststatus_type, nullable=False, server_default='pending'),
         sa.Column('resolved_by', sa.UUID(), nullable=True),
         sa.Column('resolved_at', sa.DateTime(), nullable=True),
         sa.Column('denial_reason', sa.String(length=1000), nullable=True),
