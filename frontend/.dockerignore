@@ -42,11 +42,9 @@ build
 # TypeScript source maps
 *.map
 
-# Development configs
+# Development configs (not build configs - tsconfig and vite.config are needed for build)
 .eslintrc*
 .prettierrc*
-tsconfig*.json
-vite.config.ts
 vitest.config.ts
 
 # Storybook

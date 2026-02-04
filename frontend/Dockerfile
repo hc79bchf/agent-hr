@@ -7,7 +7,11 @@ RUN npm install
 
 COPY . .
 
-# Build - Vite reads from .env.production
+# Allow overriding API URL at build time (defaults to .env.production value)
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
+# Build - Vite reads from .env.production, but env vars take precedence
 # Source maps are disabled in vite.config.ts
 RUN npm run build
 
