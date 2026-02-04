@@ -32,9 +32,10 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# CORS configuration - allow Railway subdomains and localhost
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origin_regex=r"https://.*\.railway\.app|http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
