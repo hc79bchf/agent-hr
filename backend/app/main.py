@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.routers import (
     auth_router,
@@ -26,11 +28,74 @@ from app.routers import (
     agent_component_grants_router,
 )
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses to prevent reverse engineering."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        # Security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+
+        # Remove server identification headers
+        if "server" in response.headers:
+            del response.headers["server"]
+
+        return response
+
+
+# Blocked paths that could expose source code or sensitive info
+BLOCKED_PATHS = [
+    "/.git", "/.env", "/.svn", "/.hg",
+    "/requirements.txt", "/pyproject.toml", "/setup.py",
+    "/Dockerfile", "/docker-compose",
+    "/__pycache__", "/.pytest_cache",
+    "/tests", "/test",
+]
+
+
+class PathProtectionMiddleware(BaseHTTPMiddleware):
+    """Block access to sensitive paths that could expose source code."""
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path.lower()
+
+        # Block access to sensitive paths
+        for blocked in BLOCKED_PATHS:
+            if blocked in path:
+                return JSONResponse(
+                    status_code=404,
+                    content={"detail": "Not Found"}
+                )
+
+        # Block access to Python files
+        if path.endswith(".py") or path.endswith(".pyc"):
+            return JSONResponse(
+                status_code=404,
+                content={"detail": "Not Found"}
+            )
+
+        return await call_next(request)
+
+
 app = FastAPI(
     title="Agent-HR API",
     description="API for managing Claude Code agents",
     version="0.1.0",
+    # Hide docs in production (can be enabled via env var if needed)
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
 )
+
+# Security middleware - add headers and block sensitive paths
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(PathProtectionMiddleware)
 
 # CORS configuration - allow Railway subdomains and localhost
 app.add_middleware(

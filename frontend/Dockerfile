@@ -8,17 +8,24 @@ RUN npm install
 COPY . .
 
 # Build - Vite reads from .env.production
+# Source maps are disabled in vite.config.ts
 RUN npm run build
 
-# Production stage - serve static files
-FROM node:20-alpine
+# Production stage - use nginx for security headers
+FROM nginx:alpine
 
-WORKDIR /app
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
 
-RUN npm install -g serve
+# Copy custom nginx config with security headers
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-COPY --from=builder /app/dist ./dist
+# Copy only the built static files (no source code)
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Remove any source maps if accidentally generated
+RUN find /usr/share/nginx/html -name "*.map" -delete 2>/dev/null || true
 
 EXPOSE 3000
 
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["nginx", "-g", "daemon off;"]

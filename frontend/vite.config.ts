@@ -8,6 +8,33 @@ export default defineConfig({
     host: true,
     allowedHosts: ['.railway.app'],
   },
+  build: {
+    // Disable source maps in production to prevent reverse engineering
+    sourcemap: false,
+    // Minify and obfuscate code
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+      mangle: {
+        toplevel: true,
+      },
+      format: {
+        comments: false,
+      },
+    },
+    // Remove asset source references
+    rollupOptions: {
+      output: {
+        // Randomize chunk names to make reverse engineering harder
+        chunkFileNames: 'assets/[hash].js',
+        entryFileNames: 'assets/[hash].js',
+        assetFileNames: 'assets/[hash].[ext]',
+      },
+    },
+  },
   optimizeDeps: {
     include: ['swagger-ui-react'],
   },

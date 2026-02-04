@@ -1,0 +1,63 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Source control
+.git
+.gitignore
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Environment files (use build args instead)
+.env
+.env.local
+.env.development
+.env.test
+
+# Test files - not needed in production
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+src/setupTests.ts
+coverage
+.nyc_output
+
+# Documentation
+*.md
+docs
+LICENSE
+
+# Build artifacts (we build fresh in Docker)
+dist
+build
+
+# TypeScript source maps
+*.map
+
+# Development configs
+.eslintrc*
+.prettierrc*
+tsconfig*.json
+vite.config.ts
+vitest.config.ts
+
+# Storybook
+.storybook
+storybook-static
+
+# Debug files
+*.log
+logs
+
+# Temporary files
+tmp
+temp
+*.tmp

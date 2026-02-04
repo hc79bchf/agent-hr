@@ -1,0 +1,81 @@
+# Python bytecode
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv
+env
+.venv
+.env
+
+# Source control
+.git
+.gitignore
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Test files and coverage
+tests
+pytest.ini
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.nox
+coverage.xml
+*.cover
+.hypothesis
+
+# Documentation
+*.md
+docs
+LICENSE
+README*
+
+# Development files
+*.log
+logs
+tmp
+temp
+
+# Local development configs
+.env.local
+.env.development
+.env.test
+docker-compose*.yml
+
+# Build artifacts
+dist
+build
+*.egg-info
+.eggs
+
+# Jupyter notebooks (if any)
+*.ipynb
+.ipynb_checkpoints
+
+# Database files (local dev)
+*.db
+*.sqlite3
+
+# Secrets and credentials (should use env vars)
+secrets
+credentials
+*.pem
+*.key
+
+# Debug files
+*.log
+.mypy_cache
+.ruff_cache
+
+# Scripts not needed in production (keep only essential ones)
+# Note: startup.py and migrations are needed
