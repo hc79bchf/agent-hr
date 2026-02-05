@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.models.component_registry import ComponentRegistry, ComponentSnapshot, ComponentType, ComponentVisibility, ComponentStatus
+from app.models.component_registry import ComponentRegistry, ComponentSnapshot, ComponentType, ComponentVisibility, ComponentStatus, EntitlementType
 from app.models.component_version import ComponentVersion
 from app.schemas.component_registry import (
     ComponentRegistryCreate,
@@ -241,6 +241,7 @@ async def create_component(
         visibility=data.visibility,
         component_metadata=data.component_metadata,
         status=data.status or ComponentStatus.DRAFT,
+        entitlement_type=data.entitlement_type or EntitlementType.OPEN,
     )
     db.add(component)
     db.commit()
