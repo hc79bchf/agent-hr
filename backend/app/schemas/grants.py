@@ -129,3 +129,15 @@ class ComponentAccessRequestListResponse(BaseModel):
 
     data: list[ComponentAccessRequestResponse]
     total: int
+
+
+class GrantExtendRequest(BaseModel):
+    """Schema for extending a grant's expiration."""
+    new_expires_at: datetime
+
+
+class GrantCheckResponse(BaseModel):
+    """Response for checking if an agent has access to a component."""
+    has_access: bool
+    access_level: Optional[ComponentAccessLevel] = None
+    expires_at: Optional[datetime] = None

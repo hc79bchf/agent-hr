@@ -15,7 +15,11 @@ from app.schemas.grants import (
     ComponentGrantUpdate,
     ComponentGrantResponse,
     ComponentGrantListResponse,
+    GrantExtendRequest,
+    GrantCheckResponse,
 )
+from app.dependencies import get_current_user
+from app.models.user import User
 
 router = APIRouter(prefix="/api/components/{component_id}/grants", tags=["component-grants"])
 
@@ -92,6 +96,29 @@ def list_grants(component_id: UUID, db: Session = Depends(get_db)):
         ComponentGrant.component_id == component_id
     ).all()
     return ComponentGrantListResponse(data=grants, total=len(grants))
+
+
+@router.get("/check", response_model=GrantCheckResponse)
+def check_access(
+    component_id: UUID,
+    agent_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """Check if an agent has active access to a component."""
+    get_component_or_404(component_id, db)
+    grant = db.query(ComponentGrant).filter(
+        ComponentGrant.component_id == component_id,
+        ComponentGrant.agent_id == agent_id,
+    ).first()
+
+    if not grant or not grant.is_active:
+        return GrantCheckResponse(has_access=False)
+
+    return GrantCheckResponse(
+        has_access=True,
+        access_level=grant.access_level,
+        expires_at=grant.expires_at,
+    )
 
 
 @router.get("/{agent_id}", response_model=ComponentGrantResponse)
@@ -180,3 +207,29 @@ def revoke_grant(component_id: UUID, agent_id: UUID, db: Session = Depends(get_d
 
     grant.revoked_at = datetime.utcnow()
     db.commit()
+
+
+@router.patch("/{agent_id}/extend", response_model=ComponentGrantResponse)
+def extend_grant(
+    component_id: UUID,
+    agent_id: UUID,
+    data: GrantExtendRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Extend a grant's expiration (component owner only)."""
+    component = get_component_or_404(component_id, db)
+    if component.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only component owner can extend grants")
+
+    grant = db.query(ComponentGrant).filter(
+        ComponentGrant.component_id == component_id,
+        ComponentGrant.agent_id == agent_id,
+    ).first()
+    if not grant:
+        raise HTTPException(status_code=404, detail="Grant not found")
+
+    grant.expires_at = data.new_expires_at
+    db.commit()
+    db.refresh(grant)
+    return grant

@@ -13,6 +13,7 @@ from app.models.component_registry import (
     ComponentVisibility,
     AgentRegistryRef,
 )
+from app.models.component_version import ComponentVersion
 from app.models.component_grant import ComponentGrant, ComponentAccessLevel
 from app.models.component_access_request import ComponentAccessRequest, RequestStatus
 from app.models.agent_user_grant import AgentUserGrant, AccessLevel
@@ -40,6 +41,7 @@ __all__ = [
     "RegistryComponentType",
     "ComponentVisibility",
     "AgentRegistryRef",
+    "ComponentVersion",
     "ComponentGrant",
     "ComponentAccessLevel",
     "ComponentAccessRequest",

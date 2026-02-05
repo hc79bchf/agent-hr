@@ -22,6 +22,7 @@ from app.routers.component_access_requests import (
 from app.routers.component_registry import router as component_registry_router
 from app.routers.agent_registry_refs import router as agent_registry_refs_router
 from app.routers.agent_registry_refs import grants_router as agent_component_grants_router
+from app.routers.mcp_servers import router as mcp_servers_router
 
 __all__ = [
     "auth_router",
@@ -46,4 +47,5 @@ __all__ = [
     "component_registry_router",
     "agent_registry_refs_router",
     "agent_component_grants_router",
+    "mcp_servers_router",
 ]

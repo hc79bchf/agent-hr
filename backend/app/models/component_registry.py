@@ -19,6 +19,19 @@ class ComponentVisibility(str, Enum):
     PUBLIC = "public"
 
 
+class ComponentStatus(str, Enum):
+    DRAFT = "draft"
+    PUBLISHED = "published"
+    DEPRECATED = "deprecated"
+    RETIRED = "retired"
+
+
+class EntitlementType(str, Enum):
+    OPEN = "open"
+    REQUEST_REQUIRED = "request_required"
+    RESTRICTED = "restricted"
+
+
 class ComponentRegistry(Base):
     __tablename__ = "component_registry"
 
@@ -40,6 +53,20 @@ class ComponentRegistry(Base):
         nullable=False
     )
     component_metadata = Column(JSONB, default=dict)
+    status = Column(
+        SQLEnum(ComponentStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ComponentStatus.DRAFT,
+        nullable=False
+    )
+    published_at = Column(DateTime, nullable=True)
+    deprecation_reason = Column(String(500), nullable=True)
+    entitlement_type = Column(
+        SQLEnum(EntitlementType, values_callable=lambda x: [e.value for e in x]),
+        default=EntitlementType.OPEN,
+        nullable=False
+    )
+    version = Column(String(50), default="1.0.0")
+    parameters_schema = Column(JSONB, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     deleted_at = Column(DateTime, nullable=True)

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.component_registry import ComponentRegistry
+from app.models.component_registry import ComponentRegistry, EntitlementType
 from app.models.component_access_request import ComponentAccessRequest, RequestStatus
 from app.models.component_grant import ComponentGrant
 from app.models.agent import Agent
@@ -61,6 +61,13 @@ def create_access_request(
     """
     component = get_component_or_404(data.component_id, db)
 
+    # Entitlement-type-aware logic
+    if hasattr(component, 'entitlement_type') and component.entitlement_type == EntitlementType.RESTRICTED:
+        raise HTTPException(
+            status_code=403,
+            detail="This component requires direct owner invitation. Self-service requests are not allowed."
+        )
+
     # Check if there's already a pending request
     existing = db.query(ComponentAccessRequest).filter(
         ComponentAccessRequest.component_id == data.component_id,
@@ -73,16 +80,52 @@ def create_access_request(
             detail="A pending access request already exists for this component"
         )
 
-    request = ComponentAccessRequest(
-        component_id=data.component_id,
-        agent_id=agent_id,
-        requested_level=data.requested_level,
-        requested_by=component.owner_id,  # In real app, this would be the current user
-    )
-    db.add(request)
-    db.commit()
-    db.refresh(request)
-    return request
+    if hasattr(component, 'entitlement_type') and component.entitlement_type == EntitlementType.OPEN:
+        # Auto-approve: create request as APPROVED + create grant
+        now = datetime.utcnow()
+        request = ComponentAccessRequest(
+            component_id=data.component_id,
+            agent_id=agent_id,
+            requested_level=data.requested_level,
+            requested_by=component.owner_id,
+            status=RequestStatus.APPROVED,
+            resolved_by=component.owner_id,
+            resolved_at=now,
+        )
+        db.add(request)
+
+        # Also create or update grant
+        existing_grant = db.query(ComponentGrant).filter(
+            ComponentGrant.component_id == data.component_id,
+            ComponentGrant.agent_id == agent_id,
+        ).first()
+        if existing_grant:
+            existing_grant.access_level = data.requested_level
+            existing_grant.revoked_at = None
+        else:
+            grant = ComponentGrant(
+                component_id=data.component_id,
+                agent_id=agent_id,
+                access_level=data.requested_level,
+                granted_by=component.owner_id,
+            )
+            db.add(grant)
+
+        db.commit()
+        db.refresh(request)
+        return request
+    else:
+        # REQUEST_REQUIRED (default): create pending request
+        request = ComponentAccessRequest(
+            component_id=data.component_id,
+            agent_id=agent_id,
+            requested_level=data.requested_level,
+            requested_by=component.owner_id,
+        )
+        db.add(request)
+        db.commit()
+        db.refresh(request)
+        return request
 
 
 @agent_router.get("", response_model=ComponentAccessRequestListResponse)
@@ -257,6 +300,28 @@ def resolve_request(
         request.resolved_at = now
         request.denial_reason = data.denial_reason
 
+    db.commit()
+    db.refresh(request)
+    return request
+
+
+@request_router.post("/{request_id}/cancel", response_model=ComponentAccessRequestResponse)
+def cancel_request(
+    request_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """Cancel a pending access request (requester only)."""
+    request = db.query(ComponentAccessRequest).filter(
+        ComponentAccessRequest.id == request_id
+    ).first()
+    if not request:
+        raise HTTPException(status_code=404, detail="Access request not found")
+
+    if request.status != RequestStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Only pending requests can be cancelled")
+
+    request.status = RequestStatus.CANCELLED
+    request.resolved_at = datetime.utcnow()
     db.commit()
     db.refresh(request)
     return request

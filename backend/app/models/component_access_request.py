@@ -13,6 +13,7 @@ class RequestStatus(str, Enum):
     PENDING = "pending"
     APPROVED = "approved"
     DENIED = "denied"
+    CANCELLED = "cancelled"
 
 
 class ComponentAccessRequest(Base):

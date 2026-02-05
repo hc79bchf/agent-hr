@@ -26,6 +26,7 @@ from app.routers import (
     component_registry_router,
     agent_registry_refs_router,
     agent_component_grants_router,
+    mcp_servers_router,
 )
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -128,6 +129,7 @@ app.include_router(access_requests_router)
 app.include_router(component_registry_router)
 app.include_router(agent_registry_refs_router)
 app.include_router(agent_component_grants_router)
+app.include_router(mcp_servers_router)
 
 
 @app.get("/health")
