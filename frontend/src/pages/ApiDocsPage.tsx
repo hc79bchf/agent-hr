@@ -13,7 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
  * API configuration.
  */
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-const OPENAPI_URL = `${API_BASE_URL}/openapi.json`;
+const OPENAPI_URL = `${API_BASE_URL}/api/openapi.json`;
 
 /**
  * ApiDocsPage component.
@@ -116,7 +116,7 @@ export function ApiDocsPage() {
           </div>
           <div className="flex gap-3">
             <a
-              href={`${API_BASE_URL}/docs`}
+              href={`${API_BASE_URL}/api/docs`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
@@ -127,7 +127,7 @@ export function ApiDocsPage() {
               Open in New Tab
             </a>
             <a
-              href={`${API_BASE_URL}/docs`}
+              href={`${API_BASE_URL}/api/docs`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"

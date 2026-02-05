@@ -127,16 +127,16 @@ function ComponentCard({
     >
       <div className="p-4">
         {/* Header */}
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className={`p-1.5 rounded ${getTypeColor(component.type)}`}>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={`p-1.5 rounded flex-shrink-0 ${getTypeColor(component.type)}`}>
               {getTypeIcon(component.type)}
             </span>
             <h3 className="text-lg font-medium text-gray-900 truncate">
               {component.name}
             </h3>
           </div>
-          <span className={`text-xs font-medium px-2 py-1 rounded ${getVisibilityColor(component.visibility)}`}>
+          <span className={`text-xs font-medium px-2 py-1 rounded flex-shrink-0 ${getVisibilityColor(component.visibility)}`}>
             {component.visibility}
           </span>
         </div>
@@ -243,6 +243,7 @@ export function ComponentRegistryPage() {
   });
   const [isRequestAccessModalOpen, setIsRequestAccessModalOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Debounce search
   const debouncedSearch = useDebouncedValue(filters.search, SEARCH_DEBOUNCE_MS);
@@ -251,6 +252,7 @@ export function ComponentRegistryPage() {
   const queryParams: ComponentRegistryListParams = useMemo(() => {
     const params: ComponentRegistryListParams = {
       limit: PAGE_SIZE,
+      skip: (currentPage - 1) * PAGE_SIZE,
     };
     if (debouncedSearch) {
       params.search = debouncedSearch;
@@ -265,7 +267,7 @@ export function ComponentRegistryPage() {
       params.owner_id = user.id;
     }
     return params;
-  }, [debouncedSearch, filters, user]);
+  }, [debouncedSearch, filters, user, currentPage]);
 
   // Fetch components
   const { data, isLoading, isError, error } = useQuery({
@@ -344,6 +346,7 @@ export function ComponentRegistryPage() {
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setFilters((prev) => ({ ...prev, search: e.target.value }));
+    setCurrentPage(1);
   }, []);
 
   const handleTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -351,6 +354,7 @@ export function ComponentRegistryPage() {
       ...prev,
       type: e.target.value as RegistryComponentType | '',
     }));
+    setCurrentPage(1);
   }, []);
 
   const handleVisibilityChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -358,6 +362,7 @@ export function ComponentRegistryPage() {
       ...prev,
       visibility: e.target.value as ComponentVisibility | '',
     }));
+    setCurrentPage(1);
   }, []);
 
   const handleOwnedToggle = useCallback(() => {
@@ -365,6 +370,7 @@ export function ComponentRegistryPage() {
       ...prev,
       showOwned: !prev.showOwned,
     }));
+    setCurrentPage(1);
   }, []);
 
   const handleComponentClick = useCallback((component: ComponentRegistryEntry) => {
@@ -780,6 +786,66 @@ export function ComponentRegistryPage() {
                     />
                   ))}
                 </div>
+
+                {/* Pagination */}
+                {data.total > PAGE_SIZE && (
+                  <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+                    <div className="text-sm text-gray-500">
+                      Page {currentPage} of {Math.ceil(data.total / PAGE_SIZE)}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Previous
+                      </button>
+                      {Array.from({ length: Math.ceil(data.total / PAGE_SIZE) }, (_, i) => i + 1)
+                        .filter((page) => {
+                          const total = Math.ceil(data.total / PAGE_SIZE);
+                          return page === 1 || page === total || Math.abs(page - currentPage) <= 1;
+                        })
+                        .reduce<(number | string)[]>((acc, page, idx, arr) => {
+                          if (idx > 0 && page - (arr[idx - 1] as number) > 1) {
+                            acc.push('...');
+                          }
+                          acc.push(page);
+                          return acc;
+                        }, [])
+                        .map((item, idx) =>
+                          typeof item === 'string' ? (
+                            <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">...</span>
+                          ) : (
+                            <button
+                              key={item}
+                              onClick={() => setCurrentPage(item)}
+                              className={`inline-flex items-center px-3 py-2 border text-sm font-medium rounded-md ${
+                                currentPage === item
+                                  ? 'border-indigo-500 bg-indigo-50 text-indigo-600'
+                                  : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                              }`}
+                            >
+                              {item}
+                            </button>
+                          )
+                        )}
+                      <button
+                        onClick={() => setCurrentPage((p) => Math.min(Math.ceil(data.total / PAGE_SIZE), p + 1))}
+                        disabled={currentPage >= Math.ceil(data.total / PAGE_SIZE)}
+                        className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                        <svg className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </>
