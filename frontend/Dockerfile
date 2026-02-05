@@ -30,6 +30,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Remove any source maps if accidentally generated
 RUN find /usr/share/nginx/html -name "*.map" -delete 2>/dev/null || true
 
+ENV PORT=3000
 EXPOSE 3000
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/conf.d/default.conf > /etc/nginx/conf.d/default.conf.tmp && mv /etc/nginx/conf.d/default.conf.tmp /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
